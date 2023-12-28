@@ -49,7 +49,6 @@ export class JobsController {
   @ApiOperation({ summary: 'For get a job information' })
   findOne(@Param('id') id: string, @Query() queryString: string) {
     let result = this.jobsService.findOne(id, queryString);
-
     return result;
   }
 

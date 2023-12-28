@@ -195,14 +195,23 @@ export class JobsService {
             select: { name: 1, logo: 1 }
           });
 
-        return job;
+        return { job: job, checkApplied: false, checkLiked: false };
       } else {
 
         let checkApplied = false;
-        let user = await this.userModel.find({
+        let checkLiked = false;
+
+        let userApplied = await this.userModel.find({
           $and: [
             { _id: filter.userId },
             { appliedJobs: { $in: [id] } }
+          ]
+        })
+
+        let userLiked = await this.userModel.find({
+          $and: [
+            { _id: filter.userId },
+            { likeJobs: { $in: [id] } }
           ]
         })
 
@@ -212,8 +221,9 @@ export class JobsService {
             select: { name: 1, logo: 1 }
           });
 
-        if (user.length > 0) checkApplied = true;
-        return { job: job, checkApplied: checkApplied };
+        if (userApplied.length > 0) checkApplied = true;
+        if (userLiked.length > 0) checkLiked = true;
+        return { job: job, checkApplied: checkApplied, checkLiked: checkLiked };
       }
 
 
