@@ -145,18 +145,18 @@ export class JobsService {
 
   async findAll(currentPage: number, limit: number, queryString: string) {
     let { filter, sort, population } = aqp(queryString);
-    delete filter.current;
-    delete filter.pageSize;
-
-    this.convertStringToRegExp(filter);
-    // this.logger.log(filter);
-    let offset = (+currentPage - 1) * (+limit);
-    let defaultLimit = +limit ? +limit : 10;
-
-    const totalItems = (await this.jobModel.find(filter)).length;
-    const totalPages = Math.ceil(totalItems / defaultLimit);
 
     if (!filter.userId) {
+      delete filter.current;
+      delete filter.pageSize;
+
+      this.convertStringToRegExp(filter);
+      // this.logger.log(filter);
+      let offset = (+currentPage - 1) * (+limit);
+      let defaultLimit = +limit ? +limit : 10;
+
+      const totalItems = (await this.jobModel.find(filter)).length;
+      const totalPages = Math.ceil(totalItems / defaultLimit);
       const results = await this.jobModel.find(filter)
         .skip(offset)
         .limit(defaultLimit)
@@ -184,7 +184,21 @@ export class JobsService {
         results: finalResult
       }
     } else {
-      const results = await this.jobModel.find({ isActive: true })
+      delete filter.current;
+      delete filter.pageSize;
+
+      let userId = filter.userId;
+
+      delete filter.userId;
+
+      this.convertStringToRegExp(filter);
+      // this.logger.log(filter);
+      let offset = (+currentPage - 1) * (+limit);
+      let defaultLimit = +limit ? +limit : 10;
+
+      const totalItems_1 = (await this.jobModel.find(filter)).length;
+      const totalPages_1 = Math.ceil(totalItems_1 / defaultLimit);
+      const results = await this.jobModel.find(filter)
         .skip(offset)
         .limit(defaultLimit)
         .sort(sort as any)
@@ -197,22 +211,19 @@ export class JobsService {
         .select({ name: 1, skills: 1, salary: 1, level: 1, location: 1, startDate: 1, endDate: 1, appliedUsers: 1, isActive: 1 })
         .exec();
 
-      const totalItems_1 = (await this.jobModel.find({ isActive: true })).length;
-      const totalPages_1 = Math.ceil(totalItems_1 / defaultLimit);
-
       let finalResult = await Promise.all(results.map(async (result) => {
         let checkApplied = false;
         let checkLiked = false;
         let userApplied = await this.userModel.find({
           $and: [
-            { _id: filter.userId },
+            { _id: userId },
             { appliedJobs: { $in: [result._id] } }
           ]
         })
 
         let userLiked = await this.userModel.find({
           $and: [
-            { _id: filter.userId },
+            { _id: userId },
             { likeJobs: { $in: [result._id] } }
           ]
         })
