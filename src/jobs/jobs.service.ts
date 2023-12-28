@@ -197,6 +197,9 @@ export class JobsService {
         .select({ name: 1, skills: 1, salary: 1, level: 1, location: 1, startDate: 1, endDate: 1, appliedUsers: 1, isActive: 1 })
         .exec();
 
+      const totalItems_1 = (await this.jobModel.find({ isActive: true })).length;
+      const totalPages_1 = Math.ceil(totalItems_1 / defaultLimit);
+
       let finalResult = await Promise.all(results.map(async (result) => {
         let checkApplied = false;
         let checkLiked = false;
@@ -218,13 +221,12 @@ export class JobsService {
         if (userLiked.length > 0) checkLiked = true;
         return { job: result, checkApplied: checkApplied, checkLiked: checkLiked };
       }))
-
       return {
         meta: {
           current: currentPage,
           pageSize: limit,
-          pages: totalPages,
-          total: totalItems
+          pages: totalPages_1,
+          total: totalItems_1
         },
         results: finalResult
       }
