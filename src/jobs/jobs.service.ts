@@ -156,27 +156,78 @@ export class JobsService {
     const totalItems = (await this.jobModel.find(filter)).length;
     const totalPages = Math.ceil(totalItems / defaultLimit);
 
-    const results = await this.jobModel.find(filter)
-      .skip(offset)
-      .limit(defaultLimit)
-      .sort(sort as any)
-      .populate(
-        {
-          path: "company",
-          select: { logo: 1, name: 1 }
-        }
-      )
-      .select({ name: 1, skills: 1, salary: 1, level: 1, location: 1, startDate: 1, endDate: 1, appliedUsers: 1, isActive: 1 })
-      .exec();
-    //
-    return {
-      meta: {
-        current: currentPage,
-        pageSize: limit,
-        pages: totalPages,
-        total: totalItems
-      },
-      results
+    if (!filter.userId) {
+      const results = await this.jobModel.find(filter)
+        .skip(offset)
+        .limit(defaultLimit)
+        .sort(sort as any)
+        .populate(
+          {
+            path: "company",
+            select: { logo: 1, name: 1 }
+          }
+        )
+        .select({ name: 1, skills: 1, salary: 1, level: 1, location: 1, startDate: 1, endDate: 1, appliedUsers: 1, isActive: 1 })
+        .exec();
+
+      let finalResult = await Promise.all(results.map(async (result) => {
+        return { job: result, checkApplied: false, checkLiked: false };
+      }))
+
+      return {
+        meta: {
+          current: currentPage,
+          pageSize: limit,
+          pages: totalPages,
+          total: totalItems
+        },
+        results: finalResult
+      }
+    } else {
+      const results = await this.jobModel.find({ isActive: true })
+        .skip(offset)
+        .limit(defaultLimit)
+        .sort(sort as any)
+        .populate(
+          {
+            path: "company",
+            select: { logo: 1, name: 1 }
+          }
+        )
+        .select({ name: 1, skills: 1, salary: 1, level: 1, location: 1, startDate: 1, endDate: 1, appliedUsers: 1, isActive: 1 })
+        .exec();
+
+      let finalResult = await Promise.all(results.map(async (result) => {
+        let checkApplied = false;
+        let checkLiked = false;
+        let userApplied = await this.userModel.find({
+          $and: [
+            { _id: filter.userId },
+            { appliedJobs: { $in: [result._id] } }
+          ]
+        })
+
+        let userLiked = await this.userModel.find({
+          $and: [
+            { _id: filter.userId },
+            { likeJobs: { $in: [result._id] } }
+          ]
+        })
+
+        if (userApplied.length > 0) checkApplied = true;
+        if (userLiked.length > 0) checkLiked = true;
+        return { job: result, checkApplied: checkApplied, checkLiked: checkLiked };
+      }))
+
+      return {
+        meta: {
+          current: currentPage,
+          pageSize: limit,
+          pages: totalPages,
+          total: totalItems
+        },
+        results: finalResult
+      }
     }
   }
 
